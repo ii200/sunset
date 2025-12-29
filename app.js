@@ -279,7 +279,8 @@ async function fetchWithTimeout(url, timeoutMs = 12000, headers = {})
 		const res = await fetch(url,
 		{
 			signal: controller.signal,
-			headers
+			headers,
+			cache: "no-store"
 		});
 
 		if (!res.ok)
@@ -505,11 +506,12 @@ async function getDataMetNo(lat, lon)
 {
 	const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`;
 
+	// NOTE:
+	// Do NOT set "User-Agent" header in browser fetch. It's a forbidden header and breaks on iOS/Safari.
 	const data = await fetchWithTimeout(
 		url,
 		14000,
 		{
-			"User-Agent": "sunset-chance/1.0 (contact: local-dev)",
 			"Accept": "application/json"
 		}
 	);
@@ -551,6 +553,7 @@ async function getDataMetNo(lat, lon)
 
 async function getDataFromProviders(lat, lon)
 {
+	// Put Open-Meteo first for stability across browsers (including iOS)
 	const providers =
 	[
 		{ name: "Open-Meteo", fn: getDataOpenMeteo },
@@ -601,7 +604,7 @@ function getBrowserGeo()
 	});
 }
 
-// IP geo with fallbacks (fix)
+// IP geo with fallbacks
 async function getIpGeo()
 {
 	const providers =
@@ -859,9 +862,6 @@ function cycleLang()
 	localStorage.setItem("sunset_lang", LANG);
 
 	applyI18n();
-
-	// If you want to also re-format already shown times/labels:
-	// easiest is just reset to welcome:
 	resetUI();
 }
 
