@@ -888,9 +888,6 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	gap:10px;
 	align-items:center;
 }
-/* ---------- Mobile width / overflow fixes ---------- */
-
-/* Allow long texts (coords, timezone) to wrap instead of forcing overflow */
 .pill,
 .timeVal,
 .capSub,
@@ -904,7 +901,6 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	white-space:normal;
 }
 
-/* Important: flex children must be allowed to shrink */
 .resultTop,
 .scoreRow,
 .footerRow,
@@ -921,7 +917,6 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	min-width:0;
 }
 
-/* Toast should never push layout wider than viewport */
 .toast
 {
 	max-width:100%;
@@ -931,7 +926,6 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	word-break:break-word;
 }
 
-/* Footer: wrap on small screens */
 .footerRow,
 .footerControls
 {
@@ -939,7 +933,6 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	justify-content:center;
 }
 
-/* On very small screens stack the score row to avoid squeezing right side */
 @media (max-width: 420px)
 {
 	.scoreRow
@@ -950,7 +943,6 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	}
 }
 
-/* Slightly reduce paddings on narrow screens */
 @media (max-width: 520px)
 {
 	.app
