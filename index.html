@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Sunset Chance</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+	<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+	<div class="bg"></div>
+	<div class="grain"></div>
+	<div class="vignette"></div>
+
+	<div class="app">
+		<div class="stage">
+			<!-- STEP 1 -->
+			<section id="stepWelcome" class="panel isActive">
+				<div class="heroGrid">
+					<div class="hero">
+						<h1 data-i18n="h1">Beautiful sunset today?</h1>
+						<p class="lead" data-i18n="lead">I estimate the chance using clouds, precipitation and visibility — with an explanation.</p>
+
+						<div class="ctaGrid">
+							<button id="btnGeo" class="cta ctaPrimary" type="button">
+								<span class="ctaIcon">📍</span>
+								<span>
+									<span class="ctaTitle" data-i18n="btn_geo_title">Use geolocation</span>
+									<span class="ctaDesc" data-i18n="btn_geo_desc">More accurate</span>
+								</span>
+								<span class="ctaArrow">→</span>
+							</button>
+
+							<button id="btnIp" class="cta ctaGhost" type="button">
+								<span class="ctaIcon">🌐</span>
+								<span>
+									<span class="ctaTitle" data-i18n="btn_ip_title">Use IP</span>
+									<span class="ctaDesc" data-i18n="btn_ip_desc">Faster</span>
+								</span>
+								<span class="ctaArrow">→</span>
+							</button>
+						</div>
+
+						<div class="microNote">
+							<span data-i18n="manual_note">Or manually:</span>
+							<button id="btnManualOpen" class="linkBtn" type="button" data-i18n="manual_open">enter coordinates</button>
+						</div>
+
+						<div id="manualBox" class="manual hidden">
+							<div class="manualRow">
+								<input id="lat" class="input" type="text" inputmode="decimal" placeholder="lat" />
+								<input id="lon" class="input" type="text" inputmode="decimal" placeholder="lon" />
+								<button id="btnManualGo" class="miniBtn" type="button" data-i18n="manual_go">Check</button>
+							</div>
+							<div class="hint" data-i18n="manual_hint">Tip: Buenos Aires ≈ -34.6037, -58.3816</div>
+						</div>
+
+						<div id="welcomeError" class="errorLine hidden"></div>
+					</div>
+
+					<div class="heroArt">
+						<div class="sunCycle" aria-hidden="true">
+							<div class="cycleGlow"></div>
+							<div class="cyclePath"></div>
+							<div class="cycleSun"></div>
+							<div class="cycleCloud cc1"></div>
+							<div class="cycleCloud cc2"></div>
+							<div class="cycleCloud cc3"></div>
+							<div class="cycleHorizon"></div>
+						</div>
+
+						<div class="heroBadge">
+							<div class="badgeTitle" data-i18n="badge_title">Sunset forecast</div>
+							<div class="badgeSub" data-i18n="badge_sub">1 click → chance + explanation</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- STEP 2 -->
+			<section id="stepLoading" class="panel" data-phase="connect">
+				<div class="loaderWrap">
+					<div class="skyLoader" aria-hidden="true">
+						<div class="sun"></div>
+						<div class="cloud c1"></div>
+						<div class="cloud c2"></div>
+						<div class="cloud c3"></div>
+						<div class="horizon"></div>
+					</div>
+
+					<div class="loadingText">
+						<div class="loadingTitle" data-i18n="loading_title">Calculating…</div>
+						<div id="loadingLine" class="loadingLine">—</div>
+
+						<div class="loadingTips">
+							<span class="tipDot"></span>
+							<span data-i18n="loading_tip">Heuristic ≠ guarantee. Best results with accurate geolocation.</span>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- STEP 3 -->
+			<section id="stepResult" class="panel">
+				<div class="resultGrid">
+					<div class="resultCard">
+						<div class="resultTop">
+							<div id="pillProvider" class="pill">—</div>
+							<div id="pillCoords" class="pill pillSoft">—</div>
+						</div>
+
+						<div class="scoreRow">
+							<div class="score">
+								<div id="scoreNum" class="scoreNum">--</div>
+								<div class="scorePct">%</div>
+							</div>
+							<div id="scoreLabel" class="scoreLabel">—</div>
+						</div>
+
+						<div class="timeRow">
+							<div class="timePill">
+								<div class="timeCap" data-i18n="sunset_window">Sunset window</div>
+								<div id="sunsetWindow" class="timeVal">—</div>
+							</div>
+							<div class="timePill">
+								<div class="timeCap" data-i18n="timezone">Time zone</div>
+								<div id="timeZoneVal" class="timeVal">—</div>
+							</div>
+						</div>
+
+						<div class="barWrap">
+							<div class="bar">
+								<div id="barFill" class="barFill"></div>
+								<div class="barGlow"></div>
+							</div>
+							<div class="barLegend">
+								<span>0</span>
+								<span>100</span>
+							</div>
+						</div>
+
+						<div class="reasonsBlock">
+							<div class="reasonsTitle" data-i18n="why">Why this score</div>
+							<ul id="reasons" class="reasons"></ul>
+						</div>
+
+						<div class="actions">
+							<button id="btnTryAgain" class="miniBtn" type="button" data-i18n="try_again">Try again</button>
+							<button id="btnCopy" class="miniBtn miniGhost" type="button" data-i18n="copy">Copy</button>
+						</div>
+
+						<div id="resultError" class="errorLine hidden"></div>
+						<div id="copyToast" class="toast hidden">Copied</div>
+					</div>
+
+					<div class="artCard">
+						<div class="sunsetArt" aria-hidden="true">
+							<div class="shine"></div>
+							<div class="cloudArt ca1"></div>
+							<div class="cloudArt ca2"></div>
+							<div class="cloudArt ca3"></div>
+							<div class="sunDisk"></div>
+							<div class="sparkles"></div>
+							<div class="sea"></div>
+						</div>
+
+						<div class="artCaption">
+							<div id="capTitle" class="capTitle">—</div>
+							<div id="capSub" class="capSub">—</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+
+		<!-- Footer with controls -->
+		<div class="footerRow">
+			<div class="footer" data-i18n="footer">Everything has its sunset, only the night ends with dawn.</div>
+
+			<div class="footerControls">
+				<button id="langPill" class="pill pillBtn" type="button" title="Language">UI: EN</button>
+				<button id="btnRestart" class="pill pillBtn" type="button" title="Restart">↻</button>
+			</div>
+		</div>
+	</div>
+
+	<script src="./app.js"></script>
+</body>
+</html>
