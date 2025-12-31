@@ -19,7 +19,6 @@ const welcomeError = document.getElementById("welcomeError");
 const resultError = document.getElementById("resultError");
 
 const loadingLine = document.getElementById("loadingLine");
-
 const langPill = document.getElementById("langPill");
 
 const pillProvider = document.getElementById("pillProvider");
@@ -37,15 +36,24 @@ const capSub = document.getElementById("capSub");
 
 const copyToast = document.getElementById("copyToast");
 
+// Color UI
+const palette = document.getElementById("palette");
+const tonePill = document.getElementById("tonePill");
+const toneMeta = document.getElementById("toneMeta");
+const colorSub = document.getElementById("colorSub");
+
+// Tone scene
+const toneScene = document.getElementById("toneScene");
+const toneSunPath = toneScene ? toneScene.querySelector(".toneSunPath") : null;
+const toneHaze = toneScene ? toneScene.querySelector(".toneHaze") : null;
+const toneStars = toneScene ? toneScene.querySelector(".toneStars") : null;
+const toneWater = toneScene ? toneScene.querySelector(".toneWater") : null;
+const toneSun = toneScene ? toneScene.querySelector(".toneSun") : null;
+const toneClouds = toneScene ? Array.from(toneScene.querySelectorAll(".toneCloud")) : [];
+
 // ---------- i18n ----------
 function detectLang()
 {
-	const saved = localStorage.getItem("sunset_lang");
-	if (saved === "ru" || saved === "en" || saved === "es")
-	{
-		return saved;
-	}
-
 	const raw = (navigator.languages && navigator.languages[0]) ? navigator.languages[0] : (navigator.language || "en");
 	const lower = raw.toLowerCase();
 
@@ -54,7 +62,7 @@ function detectLang()
 	return "en";
 }
 
-let LANG = detectLang();
+const LANG = detectLang();
 
 const I18N =
 {
@@ -74,14 +82,13 @@ const I18N =
 		badge_title: "Солнечный прогноз",
 		badge_sub: "1 клик → вероятность + объяснение",
 
-		loading_title: "Считаю закат…",
+		loading_title: "Считаю…",
 		loading_tip: "Эвристика ≠ гарантия. Лучший результат — с точной геолокацией.",
-
 		loading_steps:
 		[
 			"Подключаюсь к погодному провайдеру",
 			"Получаю время заката и слои облачности",
-			"Проверяю осадки, видимость и влажность",
+			"Получаю аэрозоли/дымку (воздух)",
 			"Собираю гипотезу и объяснение"
 		],
 
@@ -105,11 +112,20 @@ const I18N =
 		label_mid: "Средний шанс",
 		label_low: "Низкий шанс",
 
-		footer: "Всё имеет свой закат, только ночь заканчивается рассветом.",
+		color_title: "Прогноз палитры",
+		color_sub: "Оценка тона зависит от облаков, видимости и аэрозолей/дымки.",
+		tone_golden: "Золотой",
+		tone_pink: "Розово-фиолетовый",
+		tone_red: "Красно-оранжевый",
+		tone_muted: "Пастель/дымка",
+		tone_grey: "Серый/приглушённый",
+		tone_meta: "Вероятности: {gold}% золото · {pink}% розовый · {red}% красный · {muted}% пастель",
 
 		err_geo: "Не удалось получить геолокацию.",
 		err_coords: "Введите корректные lat/lon.",
-		err_ip: "Не удалось определить локацию по IP."
+		err_ip: "Не удалось определить локацию по IP.",
+
+		footer: "Всё имеет свой закат, только ночь заканчивается рассветом."
 	},
 	en:
 	{
@@ -129,12 +145,11 @@ const I18N =
 
 		loading_title: "Calculating…",
 		loading_tip: "Heuristic ≠ guarantee. Best results with accurate geolocation.",
-
 		loading_steps:
 		[
 			"Connecting to a weather provider",
 			"Fetching sunset time and cloud layers",
-			"Checking precipitation, visibility and humidity",
+			"Fetching aerosols/haze (air)",
 			"Building a score and explanation"
 		],
 
@@ -158,11 +173,20 @@ const I18N =
 		label_mid: "Medium chance",
 		label_low: "Low chance",
 
-		footer: "Everything has its sunset, only the night ends with dawn.",
+		color_title: "Predicted palette",
+		color_sub: "Tone depends on clouds, visibility and aerosols/haze.",
+		tone_golden: "Golden",
+		tone_pink: "Pink / Purple",
+		tone_red: "Red / Orange",
+		tone_muted: "Pastel / Haze",
+		tone_grey: "Grey / Muted",
+		tone_meta: "Odds: {gold}% golden · {pink}% pink · {red}% red · {muted}% pastel",
 
 		err_geo: "Could not get geolocation.",
 		err_coords: "Please enter valid lat/lon.",
-		err_ip: "Could not detect location by IP."
+		err_ip: "Could not detect IP location.",
+
+		footer: "Everything has its sunset, only the night ends with dawn."
 	},
 	es:
 	{
@@ -182,12 +206,11 @@ const I18N =
 
 		loading_title: "Calculando…",
 		loading_tip: "Heurística ≠ garantía. Mejor con geolocalización precisa.",
-
 		loading_steps:
 		[
 			"Conectando con un proveedor del clima",
 			"Obteniendo hora del atardecer y capas de nubes",
-			"Revisando precipitación, visibilidad y humedad",
+			"Obteniendo aerosoles/neblina (aire)",
 			"Armando puntaje y explicación"
 		],
 
@@ -211,33 +234,38 @@ const I18N =
 		label_mid: "Probabilidad media",
 		label_low: "Probabilidad baja",
 
-		footer: "Todo tiene su ocaso, sólo la noche termina con el amanecer.",
+		color_title: "Paleta estimada",
+		color_sub: "El tono depende de nubes, visibilidad y aerosoles/neblina.",
+		tone_golden: "Dorado",
+		tone_pink: "Rosa / Violeta",
+		tone_red: "Rojo / Naranja",
+		tone_muted: "Pastel / Neblina",
+		tone_grey: "Gris / Apagado",
+		tone_meta: "Prob.: {gold}% dorado · {pink}% rosa · {red}% rojo · {muted}% pastel",
 
 		err_geo: "No se pudo obtener la geolocalización.",
 		err_coords: "Ingresá lat/lon válidos.",
-		err_ip: "No se pudo detectar la ubicación por IP."
+		err_ip: "No se pudo detectar ubicación por IP.",
+
+		footer: "Todo tiene su ocaso, sólo la noche termina con el amanecer."
 	}
 };
 
-function T()
-{
-	return I18N[LANG] || I18N.en;
-}
+const T = I18N[LANG] || I18N.en;
 
 function applyI18n()
 {
-	const t = T();
-
 	document.querySelectorAll("[data-i18n]").forEach(el =>
 	{
 		const key = el.getAttribute("data-i18n");
-		if (t[key] !== undefined)
+		if (T[key] !== undefined)
 		{
-			el.textContent = t[key];
+			el.textContent = T[key];
 		}
 	});
 
-	langPill.textContent = `UI: ${t.lang_name}`;
+	langPill.textContent = `UI: ${T.lang_name}`;
+	colorSub.textContent = T.color_sub;
 }
 
 // ---------- UI helpers ----------
@@ -264,12 +292,17 @@ function clamp(v, min, max)
 	return Math.min(max, Math.max(min, v));
 }
 
+function clamp01(v)
+{
+	return Math.min(1, Math.max(0, v));
+}
+
 function sleep(ms)
 {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchWithTimeout(url, timeoutMs = 12000, headers = {})
+async function fetchWithTimeout(url, timeoutMs = 14000, headers = {})
 {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -296,7 +329,27 @@ async function fetchWithTimeout(url, timeoutMs = 12000, headers = {})
 	}
 }
 
-// ---------- Scoring with reason keys ----------
+async function fetchWithRetries(url, timeoutMs, headers, retries = 2)
+{
+	let last = null;
+
+	for (let i = 0; i <= retries; i++)
+	{
+		try
+		{
+			return await fetchWithTimeout(url, timeoutMs, headers);
+		}
+		catch (e)
+		{
+			last = e;
+			await sleep(220 + i * 220);
+		}
+	}
+
+	throw last || new Error("Fetch failed");
+}
+
+// ---------- Scoring ----------
 function scoreSunset(m)
 {
 	let score = 50;
@@ -437,30 +490,14 @@ const REASONS =
 };
 
 // ---------- Providers ----------
-async function getDataOpenMeteo(lat, lon)
+function pickClosestIndex(times, targetMs)
 {
-	const url =
-		`https://api.open-meteo.com/v1/forecast` +
-		`?latitude=${lat}&longitude=${lon}` +
-		`&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,precipitation,visibility,relative_humidity_2m` +
-		`&daily=sunset` +
-		`&forecast_days=1` +
-		`&timezone=auto`;
-
-	const data = await fetchWithTimeout(url, 14000);
-
-	const tz = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
-	const sunsetIso = data.daily.sunset[0];
-
-	const sunset = new Date(sunsetIso).getTime();
-	const times = data.hourly.time;
-
 	let best = 0;
 	let diff = Infinity;
 
 	times.forEach((t, i) =>
 	{
-		const d = Math.abs(new Date(t).getTime() - sunset);
+		const d = Math.abs(new Date(t).getTime() - targetMs);
 		if (d < diff)
 		{
 			diff = d;
@@ -468,10 +505,47 @@ async function getDataOpenMeteo(lat, lon)
 		}
 	});
 
+	return best;
+}
+
+async function getDataOpenMeteo(lat, lon)
+{
+	const cacheBust = Date.now();
+
+	const url =
+		`https://api.open-meteo.com/v1/forecast` +
+		`?latitude=${lat}&longitude=${lon}` +
+		`&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,precipitation,visibility,relative_humidity_2m` +
+		`&daily=sunset` +
+		`&forecast_days=1` +
+		`&timezone=auto` +
+		`&_=${cacheBust}`;
+
+	const data = await fetchWithRetries(url, 16000, {}, 2);
+
+	const tz = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
+	const sunsetIso = data.daily?.sunset?.[0] || null;
+
+	let targetMs = null;
+
+	if (sunsetIso)
+	{
+		targetMs = new Date(sunsetIso).getTime();
+	}
+	else
+	{
+		const now = new Date();
+		targetMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19, 0, 0).getTime();
+	}
+
+	const times = data.hourly.time;
+	const best = pickClosestIndex(times, targetMs);
+
 	return {
 		provider: "open-meteo",
 		timezone: tz,
 		sunsetIso,
+		targetMs,
 		metrics:
 		{
 			cloud_cover_low: data.hourly.cloud_cover_low?.[best] ?? null,
@@ -504,16 +578,17 @@ function pickClosestTimeSeries(timeseries, targetDate)
 
 async function getDataMetNo(lat, lon)
 {
-	const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`;
+	const cacheBust = Date.now();
+	const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}&_=${cacheBust}`;
 
-	// NOTE:
-	// Do NOT set "User-Agent" header in browser fetch. It's a forbidden header and breaks on iOS/Safari.
-	const data = await fetchWithTimeout(
+	const data = await fetchWithRetries(
 		url,
-		14000,
+		16000,
 		{
+			"User-Agent": "sunset-chance/1.0 (contact: local-dev)",
 			"Accept": "application/json"
-		}
+		},
+		1
 	);
 
 	const series = data?.properties?.timeseries ?? [];
@@ -539,6 +614,7 @@ async function getDataMetNo(lat, lon)
 		provider: "met.no",
 		timezone: tz,
 		sunsetIso: null,
+		targetMs: target.getTime(),
 		metrics:
 		{
 			cloud_cover_low: cloudTotal,
@@ -551,9 +627,39 @@ async function getDataMetNo(lat, lon)
 	};
 }
 
+async function getAirOpenMeteo(lat, lon, targetMs)
+{
+	const cacheBust = Date.now();
+
+	const url =
+		`https://air-quality-api.open-meteo.com/v1/air-quality` +
+		`?latitude=${lat}&longitude=${lon}` +
+		`&hourly=aerosol_optical_depth,dust,pm2_5` +
+		`&forecast_days=1` +
+		`&timezone=auto` +
+		`&_=${cacheBust}`;
+
+	const data = await fetchWithRetries(url, 16000, {}, 1);
+
+	const tz = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
+	const times = data.hourly?.time ?? [];
+
+	if (!times.length)
+	{
+		return { timezone: tz, aod: null, dust: null, pm25: null };
+	}
+
+	const idx = pickClosestIndex(times, targetMs);
+
+	const aod = data.hourly?.aerosol_optical_depth?.[idx] ?? null;
+	const dust = data.hourly?.dust?.[idx] ?? null;
+	const pm25 = data.hourly?.pm2_5?.[idx] ?? null;
+
+	return { timezone: tz, aod, dust, pm25 };
+}
+
 async function getDataFromProviders(lat, lon)
 {
-	// Put Open-Meteo first for stability across browsers (including iOS)
 	const providers =
 	[
 		{ name: "Open-Meteo", fn: getDataOpenMeteo },
@@ -566,7 +672,7 @@ async function getDataFromProviders(lat, lon)
 	{
 		try
 		{
-			setLoadingLine(`${T().loading_steps[0]}: ${p.name}`);
+			setLoadingLine(`${T.loading_steps[0]}: ${p.name}`);
 			return await p.fn(lat, lon);
 		}
 		catch (e)
@@ -604,65 +710,42 @@ function getBrowserGeo()
 	});
 }
 
-// IP geo with fallbacks
 async function getIpGeo()
 {
 	const providers =
 	[
+		async () =>
 		{
-			name: "ipapi.co",
-			url: "https://ipapi.co/json/",
-			parse: (g) => ({ lat: Number(g.latitude), lon: Number(g.longitude) })
+			const geo = await fetchWithRetries("https://ipapi.co/json/?_=" + Date.now(), 12000, {}, 1);
+			if (!geo || geo.latitude === undefined || geo.longitude === undefined) throw new Error("ipapi.co invalid");
+			return { lat: Number(geo.latitude), lon: Number(geo.longitude) };
 		},
+		async () =>
 		{
-			name: "ipwho.is",
-			url: "https://ipwho.is/",
-			parse: (g) =>
-			{
-				if (g && g.success === false) throw new Error("ipwho.is failed");
-				return { lat: Number(g.latitude), lon: Number(g.longitude) };
-			}
-		},
-		{
-			name: "ipinfo.io",
-			url: "https://ipinfo.io/json",
-			parse: (g) =>
-			{
-				const loc = String(g.loc || "");
-				const parts = loc.split(",");
-				return { lat: Number(parts[0]), lon: Number(parts[1]) };
-			}
+			const geo = await fetchWithRetries("https://ipwho.is/?_=" + Date.now(), 12000, {}, 1);
+			if (!geo || geo.success === false || geo.latitude === undefined || geo.longitude === undefined) throw new Error("ipwho.is invalid");
+			return { lat: Number(geo.latitude), lon: Number(geo.longitude) };
 		}
 	];
 
-	let lastError = null;
+	let last = null;
 
-	for (const p of providers)
+	for (const fn of providers)
 	{
 		try
 		{
-			setLoadingLine(`${T().loading_steps[0]}: ${p.name}`);
-			const geo = await fetchWithTimeout(p.url, 14000);
-
-			const coords = p.parse(geo);
-
-			if (!Number.isFinite(coords.lat) || !Number.isFinite(coords.lon))
-			{
-				throw new Error("Bad coords");
-			}
-
-			return coords;
+			return await fn();
 		}
 		catch (e)
 		{
-			lastError = e;
+			last = e;
 		}
 	}
 
-	throw lastError || new Error(T().err_ip);
+	throw last || new Error("IP geo failed");
 }
 
-// ---------- Time formatting (sunset window) ----------
+// ---------- Time formatting ----------
 function formatTime(date, timeZone)
 {
 	try
@@ -679,7 +762,7 @@ function buildSunsetWindow(sunsetIso, timeZone)
 {
 	if (!sunsetIso)
 	{
-		return { text: T().window_unknown, isExact: false };
+		return { text: T.window_unknown, isExact: false };
 	}
 
 	const center = new Date(sunsetIso);
@@ -703,12 +786,12 @@ function setLoadingLine(text)
 function startLoadingTicker()
 {
 	let i = 0;
-	setLoadingLine(T().loading_steps[0]);
+	setLoadingLine(T.loading_steps[0]);
 
 	loadingTicker = setInterval(() =>
 	{
-		i = (i + 1) % T().loading_steps.length;
-		setLoadingLine(T().loading_steps[i]);
+		i = (i + 1) % T.loading_steps.length;
+		setLoadingLine(T.loading_steps[i]);
 	}, 1200);
 }
 
@@ -721,14 +804,336 @@ function stopLoadingTicker()
 	}
 }
 
+// ---------- Color prediction ----------
+function lerp(a, b, t)
+{
+	return a + (b - a) * t;
+}
+
+function mixHex(a, b, t)
+{
+	const pa = a.replace("#", "");
+	const pb = b.replace("#", "");
+
+	const ar = parseInt(pa.slice(0, 2), 16);
+	const ag = parseInt(pa.slice(2, 4), 16);
+	const ab = parseInt(pa.slice(4, 6), 16);
+
+	const br = parseInt(pb.slice(0, 2), 16);
+	const bg = parseInt(pb.slice(2, 4), 16);
+	const bb = parseInt(pb.slice(4, 6), 16);
+
+	const rr = Math.round(lerp(ar, br, t)).toString(16).padStart(2, "0");
+	const rg = Math.round(lerp(ag, bg, t)).toString(16).padStart(2, "0");
+	const rb = Math.round(lerp(ab, bb, t)).toString(16).padStart(2, "0");
+
+	return `#${rr}${rg}${rb}`;
+}
+
+function predictColor(metrics, air)
+{
+	const low = metrics.cloud_cover_low ?? 50;
+	const mid = metrics.cloud_cover_mid ?? 25;
+	const high = metrics.cloud_cover_high ?? 25;
+
+	const upper = mid * 0.6 + high * 0.4;
+
+	const visKm = (metrics.visibility !== null) ? (metrics.visibility / 1000) : 12;
+	const hum = metrics.relative_humidity_2m ?? 60;
+	const precip = metrics.precipitation ?? 0;
+
+	const aod = air?.aod;
+	const dust = air?.dust;
+	const pm25 = air?.pm25;
+
+	let haze = 0.0;
+
+	if (aod !== null && Number.isFinite(aod))
+	{
+		haze = clamp01((aod - 0.10) / 0.45);
+	}
+
+	let hazeExtra = 0.0;
+
+	if (pm25 !== null && Number.isFinite(pm25))
+	{
+		hazeExtra += clamp01((pm25 - 10) / 35) * 0.25;
+	}
+
+	if (dust !== null && Number.isFinite(dust))
+	{
+		hazeExtra += clamp01((dust - 15) / 80) * 0.25;
+	}
+
+	haze = clamp01(haze + hazeExtra);
+
+	const visBad = clamp01((10 - visKm) / 6);
+	const lowBlock = clamp01((low - 35) / 45);
+
+	let glow = 0.0;
+	if (upper >= 25 && upper <= 60)
+	{
+		glow = 1.0;
+	}
+	else if (upper < 25)
+	{
+		glow = clamp01(upper / 25);
+	}
+	else
+	{
+		glow = clamp01((100 - upper) / 40);
+	}
+
+	const humHaze = clamp01((hum - 70) / 25) * 0.6;
+	const rainKill = clamp01((precip - 0.2) / 1.0);
+
+	const pastel = clamp01(0.25 + haze * 0.55 + visBad * 0.30 + humHaze * 0.30 + rainKill * 0.40);
+	const blocked = clamp01(lowBlock * 0.65 + rainKill * 0.55);
+
+	let red = clamp01(0.12 + haze * 0.70 + glow * 0.12 - blocked * 0.30 - pastel * 0.10);
+	let pink = clamp01(0.16 + glow * 0.62 + haze * 0.10 - blocked * 0.35);
+	let golden = clamp01(0.22 + glow * 0.40 + (1 - pastel) * 0.22 + (visKm / 20) * 0.12 - blocked * 0.25);
+	let muted = clamp01(0.18 + pastel * 0.80 + blocked * 0.20);
+
+	const sum = red + pink + golden + muted;
+	red = red / sum;
+	pink = pink / sum;
+	golden = golden / sum;
+	muted = muted / sum;
+
+	let dominant = "tone_golden";
+	let best = golden;
+
+	if (pink > best) { best = pink; dominant = "tone_pink"; }
+	if (red > best) { best = red; dominant = "tone_red"; }
+	if (muted > best) { best = muted; dominant = (blocked > 0.55) ? "tone_grey" : "tone_muted"; }
+
+	const pal = buildPalette(dominant, haze, glow, pastel);
+
+	return {
+		odds:
+		{
+			gold: Math.round(golden * 100),
+			pink: Math.round(pink * 100),
+			red: Math.round(red * 100),
+			muted: Math.round(muted * 100)
+		},
+		dominant,
+		haze,
+		glow,
+		pastel,
+		blocked,
+		lowCloudBlock: lowBlock,
+		upperGlow: glow,
+		palette: pal
+	};
+}
+
+function buildPalette(dominant, haze, glow, pastel)
+{
+	const base =
+	{
+		tone_golden: ["#0b1024", "#1b2a5a", "#ffb35c", "#ff6a3c", "#ff2b2b"],
+		tone_pink: ["#0b1024", "#2a1b5a", "#b46cff", "#ff4fa7", "#ff8a5c"],
+		tone_red: ["#0b1024", "#2a0f1f", "#ff3b2e", "#ff7a2a", "#ffd08a"],
+		tone_muted: ["#0b1024", "#1b2440", "#8aa0b8", "#c9a39a", "#ffb48a"],
+		tone_grey: ["#0b1024", "#111729", "#59627a", "#8b92a4", "#c2c7d4"]
+	};
+
+	const arr = base[dominant] || base.tone_golden;
+
+	const washTo = "#a7b5c8";
+	const wash = clamp01(pastel * 0.55 + haze * 0.35);
+
+	const warmTo = "#ff9a6b";
+	const warm = clamp01(glow * 0.35);
+
+	const out = arr.map((c, i) =>
+	{
+		let x = c;
+
+		if (i >= 2)
+		{
+			x = mixHex(x, warmTo, warm);
+		}
+
+		x = mixHex(x, washTo, wash);
+
+		return x;
+	});
+
+	return out;
+}
+
+function renderPalette(pal, dominantKey, odds)
+{
+	palette.innerHTML = "";
+
+	pal.forEach((hex, idx) =>
+	{
+		const sw = document.createElement("div");
+		sw.className = "swatch";
+
+		const fill = document.createElement("div");
+		fill.className = "swFill";
+		fill.style.background = `linear-gradient(180deg, ${mixHex(hex, "#ffffff", 0.16)}, ${hex})`;
+
+		const lab = document.createElement("div");
+		lab.className = "swLabel";
+		lab.textContent = idx === 0 ? "sky" : (idx === 4 ? "sun" : "tone");
+
+		sw.appendChild(fill);
+		sw.appendChild(lab);
+		palette.appendChild(sw);
+	});
+
+	tonePill.textContent = T[dominantKey] || dominantKey;
+
+	const meta = (T.tone_meta || "")
+		.replace("{gold}", String(odds.gold))
+		.replace("{pink}", String(odds.pink))
+		.replace("{red}", String(odds.red))
+		.replace("{muted}", String(odds.muted));
+
+	toneMeta.textContent = meta;
+}
+
+// ---------- Tone scene (NOW with cloud density) ----------
+function setToneScene(predicted)
+{
+	if (!toneScene) return;
+
+	toneScene.classList.remove("toneScene--gold", "toneScene--pink", "toneScene--red", "toneScene--muted", "toneScene--grey");
+
+	let cls = "toneScene--gold";
+	let animName = "toneArcGold";
+
+	if (predicted.dominant === "tone_pink")
+	{
+		cls = "toneScene--pink";
+		animName = "toneArcPink";
+	}
+	else if (predicted.dominant === "tone_red")
+	{
+		cls = "toneScene--red";
+		animName = "toneArcRed";
+	}
+	else if (predicted.dominant === "tone_muted")
+	{
+		cls = "toneScene--muted";
+		animName = "toneArcMuted";
+	}
+	else if (predicted.dominant === "tone_grey")
+	{
+		cls = "toneScene--grey";
+		animName = "toneArcGrey";
+	}
+
+	toneScene.classList.add(cls);
+
+	if (toneSunPath)
+	{
+		toneSunPath.style.animationName = animName;
+	}
+
+	// Haze / stars
+	const hazeOpacity = clamp01(predicted.haze * 0.75 + predicted.pastel * 0.35);
+	const starOpacity = clamp01((predicted.blocked * 0.55) + (predicted.dominant === "tone_grey" ? 0.25 : 0.0));
+
+	if (toneHaze) toneHaze.style.opacity = String(hazeOpacity);
+	if (toneStars) toneStars.style.opacity = String(starOpacity);
+
+	// Sun dimming
+	const dim = (predicted.dominant === "tone_grey") ? 0.45 : (predicted.dominant === "tone_muted" ? 0.72 : 1.0);
+	if (toneSun) toneSun.style.opacity = String(dim);
+
+	// Water reflection tint
+	const sunHex = predicted.palette?.[4] || "#ffb48a";
+	if (toneWater)
+	{
+		toneWater.style.background =
+			`linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.55)), ` +
+			`radial-gradient(140px 48px at 50% 18%, ${sunHex}33, transparent 62%)`;
+	}
+
+	// ---------- Cloud density logic ----------
+	// Base: muted/grey => thicker; gold/red/pink => thinner
+	let baseOpacity = 0.78;
+	let baseBlur = 0;
+	let baseSat = 1.0;
+	let baseBright = 1.0;
+
+	if (predicted.dominant === "tone_grey")
+	{
+		baseOpacity = 0.92;
+		baseBlur = 1.0;
+		baseSat = 0.92;
+		baseBright = 0.95;
+	}
+	else if (predicted.dominant === "tone_muted")
+	{
+		baseOpacity = 0.86;
+		baseBlur = 0.7;
+		baseSat = 0.96;
+		baseBright = 0.98;
+	}
+	else if (predicted.dominant === "tone_red")
+	{
+		baseOpacity = 0.66;
+		baseBlur = 0.0;
+		baseSat = 1.05;
+		baseBright = 1.05;
+	}
+	else if (predicted.dominant === "tone_pink")
+	{
+		baseOpacity = 0.68;
+		baseBlur = 0.0;
+		baseSat = 1.06;
+		baseBright = 1.03;
+	}
+	else // gold
+	{
+		baseOpacity = 0.64;
+		baseBlur = 0.0;
+		baseSat = 1.06;
+		baseBright = 1.06;
+	}
+
+	// Increase density if low clouds block / blocked high
+	const extraDense = clamp01(predicted.lowCloudBlock * 0.65 + predicted.blocked * 0.45);
+	const extraThin = clamp01(predicted.upperGlow * 0.45); // glow = pretty clouds -> visually "lighter"
+
+	const opacity = clamp01(baseOpacity + extraDense * 0.22 - extraThin * 0.12);
+	const blurPx = Math.max(0, baseBlur + extraDense * 1.2);
+	const sat = clamp(baseSat - extraDense * 0.10 + extraThin * 0.06, 0.85, 1.15);
+	const bright = clamp(baseBright - extraDense * 0.08 + extraThin * 0.05, 0.85, 1.15);
+
+	// Set CSS vars on container so transitions are smooth
+	toneScene.style.setProperty("--cloudOpacity", String(opacity));
+	toneScene.style.setProperty("--cloudBlur", `${blurPx.toFixed(2)}px`);
+	toneScene.style.setProperty("--cloudSat", String(sat.toFixed(2)));
+	toneScene.style.setProperty("--cloudBright", String(bright.toFixed(2)));
+
+	// Small per-cloud offsets: front cloud a bit denser
+	if (toneClouds.length)
+	{
+		toneClouds.forEach((c, i) =>
+		{
+			const k = (i === 0) ? 1.08 : (i === 1 ? 1.0 : 0.92);
+			c.style.opacity = String(clamp01(opacity * k));
+			c.style.filter = `blur(${(blurPx * (i === 2 ? 1.2 : 1.0)).toFixed(2)}px) saturate(${sat.toFixed(2)}) brightness(${bright.toFixed(2)})`;
+		});
+	}
+}
+
 // ---------- Result UI ----------
 function setResultUI(payload)
 {
-	pillProvider.textContent = `${T().source}: ${payload.provider}`;
+	pillProvider.textContent = `${T.source}: ${payload.provider}`;
 	pillCoords.textContent = `${payload.lat.toFixed(4)}, ${payload.lon.toFixed(4)}`;
 
 	scoreNum.textContent = String(payload.score);
-	scoreLabel.textContent = T()[payload.labelKey] || payload.labelKey;
+	scoreLabel.textContent = T[payload.labelKey] || payload.labelKey;
 
 	const windowInfo = buildSunsetWindow(payload.sunsetIso, payload.timezone);
 	sunsetWindow.textContent = windowInfo.text;
@@ -752,14 +1157,18 @@ function setResultUI(payload)
 
 	if (windowInfo.isExact)
 	{
-		capTitle.textContent = T().caption_title_exact;
-		capSub.textContent = T().caption_sub_exact;
+		capTitle.textContent = T.caption_title_exact;
+		capSub.textContent = T.caption_sub_exact;
 	}
 	else
 	{
-		capTitle.textContent = T().caption_title_approx;
-		capSub.textContent = T().caption_sub_approx;
+		capTitle.textContent = T.caption_title_approx;
+		capSub.textContent = T.caption_sub_approx;
 	}
+
+	const predicted = predictColor(payload.metrics, payload.air);
+	renderPalette(predicted.palette, predicted.dominant, predicted.odds);
+	setToneScene(predicted);
 }
 
 // ---------- Flow ----------
@@ -780,13 +1189,14 @@ async function runFlow(mode, manualCoords = null)
 
 		if (mode === "geo")
 		{
-			setLoadingLine(T().loading_steps[0]);
+			setLoadingLine(T.loading_steps[0]);
 			const geo = await getBrowserGeo();
 			lat = geo.lat;
 			lon = geo.lon;
 		}
 		else if (mode === "ip")
 		{
+			setLoadingLine(T.loading_steps[0]);
 			const geo = await getIpGeo();
 			lat = geo.lat;
 			lon = geo.lon;
@@ -801,10 +1211,13 @@ async function runFlow(mode, manualCoords = null)
 			throw new Error("Unknown mode");
 		}
 
-		setLoadingLine(T().loading_steps[1]);
+		setLoadingLine(T.loading_steps[1]);
 		const data = await getDataFromProviders(lat, lon);
 
-		setLoadingLine(T().loading_steps[3]);
+		setLoadingLine(T.loading_steps[2]);
+		const air = await getAirOpenMeteo(lat, lon, data.targetMs);
+
+		setLoadingLine(T.loading_steps[3]);
 		await sleep(220);
 
 		const scored = scoreSunset(data.metrics);
@@ -816,8 +1229,10 @@ async function runFlow(mode, manualCoords = null)
 			lat,
 			lon,
 			provider: data.provider,
-			timezone: data.timezone,
+			timezone: data.timezone || air.timezone,
 			sunsetIso: data.sunsetIso,
+			metrics: data.metrics,
+			air,
 			score: scored.score,
 			labelKey: scored.labelKey,
 			reasonKeys: scored.reasonKeys
@@ -829,7 +1244,12 @@ async function runFlow(mode, manualCoords = null)
 	{
 		stopLoadingTicker();
 
-		const msg = e?.message ? String(e.message) : "Error";
+		let msg = e?.message ? String(e.message) : "Error";
+		if (mode === "ip")
+		{
+			msg = T.err_ip;
+		}
+
 		showPanel(stepWelcome);
 		setError(welcomeError, msg);
 	}
@@ -849,20 +1269,33 @@ function resetUI()
 	timeZoneVal.textContent = "—";
 	pillProvider.textContent = "—";
 	pillCoords.textContent = "—";
-}
+	palette.innerHTML = "";
+	tonePill.textContent = "—";
+	toneMeta.textContent = "—";
 
-// ---------- Language switch (bottom pill) ----------
-function cycleLang()
-{
-	const order = ["en", "es", "ru"];
-	const idx = order.indexOf(LANG);
-	const next = order[(idx + 1) % order.length];
+	if (toneScene)
+	{
+		toneScene.classList.remove("toneScene--gold", "toneScene--pink", "toneScene--red", "toneScene--muted", "toneScene--grey");
+		toneScene.classList.add("toneScene--gold");
+		toneScene.style.setProperty("--cloudOpacity", "0.8");
+		toneScene.style.setProperty("--cloudBlur", "0px");
+		toneScene.style.setProperty("--cloudSat", "1.0");
+		toneScene.style.setProperty("--cloudBright", "1.0");
 
-	LANG = next;
-	localStorage.setItem("sunset_lang", LANG);
+		if (toneHaze) toneHaze.style.opacity = "0";
+		if (toneStars) toneStars.style.opacity = "0";
+		if (toneSun) toneSun.style.opacity = "1";
+		if (toneSunPath) toneSunPath.style.animationName = "toneArcGold";
 
-	applyI18n();
-	resetUI();
+		if (toneClouds.length)
+		{
+			toneClouds.forEach(c =>
+			{
+				c.style.opacity = "";
+				c.style.filter = "";
+			});
+		}
+	}
 }
 
 // ---------- Events ----------
@@ -884,7 +1317,7 @@ btnManualGo.addEventListener("click", () =>
 
 	if (!Number.isFinite(lat) || !Number.isFinite(lon))
 	{
-		setError(welcomeError, T().err_coords);
+		setError(welcomeError, T.err_coords);
 		return;
 	}
 
@@ -901,19 +1334,17 @@ btnCopy.addEventListener("click", async () =>
 
 		await navigator.clipboard.writeText(text);
 
-		copyToast.textContent = T().copied;
+		copyToast.textContent = T.copied;
 		copyToast.classList.remove("hidden");
 		setTimeout(() => copyToast.classList.add("hidden"), 1200);
 	}
 	catch
 	{
-		copyToast.textContent = T().copy_failed;
+		copyToast.textContent = T.copy_failed;
 		copyToast.classList.remove("hidden");
 		setTimeout(() => copyToast.classList.add("hidden"), 1200);
 	}
 });
-
-langPill.addEventListener("click", cycleLang);
 
 // Init
 applyI18n();
