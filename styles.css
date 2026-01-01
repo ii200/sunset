@@ -317,6 +317,32 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	color:rgba(232,236,255,.62);
 }
 
+.citySelectBlock
+{
+	margin-top:12px;
+	display:flex;
+	flex-direction:column;
+	gap:6px;
+}
+
+.citySelectLabel
+{
+	font-size:12px;
+	color:rgba(232,236,255,.62);
+}
+
+.select
+{
+	border-radius:14px;
+	border:1px solid rgba(232,236,255,.14);
+	background:rgba(0,0,0,.32);
+	color:var(--text);
+	padding:10px 12px;
+	font-family:inherit;
+	font-size:14px;
+	outline:none;
+}
+
 .hidden
 {
 	display:none !important;
@@ -651,8 +677,31 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 .score
 {
 	display:flex;
-	align-items:baseline;
+	flex-direction:column;
+	gap:4px;
+}
+
+.scoreMeta
+{
+	display:flex;
+	flex-direction:column;
 	gap:6px;
+}
+
+.scoreCaption
+{
+	font-size:13px;
+	text-transform:uppercase;
+	letter-spacing:.18em;
+	color:var(--muted);
+	font-weight:700;
+}
+
+.scoreValue
+{
+	display:flex;
+	align-items:baseline;
+	gap:8px;
 }
 
 .scoreNum
@@ -662,10 +711,12 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	line-height:1;
 }
 
-.scorePct
+.scoreUnit
 {
-	color:rgba(232,236,255,.62);
+	color:rgba(232,236,255,.72);
 	font-weight:800;
+	font-size:20px;
+	letter-spacing:.08em;
 }
 
 .scoreLabel
@@ -809,6 +860,77 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	color:rgba(232,236,255,.72);
 	font-size:13px;
 	line-height:1.35;
+}
+
+.colorForecast
+{
+	margin-top:10px;
+	display:flex;
+	flex-direction:column;
+	gap:8px;
+}
+
+.colorForecastEmpty
+{
+	font-size:12px;
+	color:rgba(232,236,255,.62);
+}
+
+.colorSwatch
+{
+	position:relative;
+	border-radius:16px;
+	border:1px solid rgba(232,236,255,.12);
+	padding:12px;
+	background:linear-gradient(135deg, var(--colorA, rgba(255,180,90,.25)), var(--colorB, rgba(97,94,239,.25)));
+	overflow:hidden;
+	box-shadow:0 8px 24px rgba(0,0,0,.25);
+	animation:colorPulse 4.4s ease-in-out infinite;
+}
+
+.colorSwatch::after
+{
+	content:"";
+	position:absolute;
+	inset:-20%;
+	background:radial-gradient(circle, rgba(255,255,255,.18), transparent 60%);
+	filter:blur(18px);
+	opacity:.4;
+	animation:swatchGlow 6s ease-in-out infinite;
+	pointer-events:none;
+}
+
+.colorSwatchMeta
+{
+	position:relative;
+	display:flex;
+	justify-content:space-between;
+	gap:12px;
+	align-items:center;
+}
+
+.colorSwatchName
+{
+	font-weight:800;
+}
+
+.colorSwatchValue
+{
+	font-size:13px;
+	font-weight:700;
+	color:rgba(232,236,255,.85);
+}
+
+@keyframes colorPulse
+{
+	0%,100% { transform:translateY(0); }
+	50% { transform:translateY(-3px); }
+}
+
+@keyframes swatchGlow
+{
+	0%,100% { transform:scale(1); opacity:.4; }
+	50% { transform:scale(1.1); opacity:.7; }
 }
 
 .actions
