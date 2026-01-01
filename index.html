@@ -28,7 +28,7 @@
 						<div class="ctaGrid">
 							<button id="btnGeo" class="cta ctaPrimary" type="button">
 								<span class="ctaIcon">📍</span>
-								<span>
+								<span class="ctaText">
 									<span class="ctaTitle" data-i18n="btn_geo_title">Use geolocation</span>
 									<span class="ctaDesc" data-i18n="btn_geo_desc">More accurate</span>
 								</span>
@@ -37,7 +37,7 @@
 
 							<button id="btnIp" class="cta ctaGhost" type="button">
 								<span class="ctaIcon">🌐</span>
-								<span>
+								<span class="ctaText">
 									<span class="ctaTitle" data-i18n="btn_ip_title">Use IP</span>
 									<span class="ctaDesc" data-i18n="btn_ip_desc">Faster</span>
 								</span>
@@ -57,12 +57,13 @@
 								<button id="btnManualGo" class="miniBtn" type="button" data-i18n="manual_go">Check</button>
 							</div>
 							<div class="hint" data-i18n="manual_hint">Tip: Buenos Aires ≈ -34.6037, -58.3816</div>
-							<div class="citySelectBlock">
-								<label for="citySelect" class="citySelectLabel" data-i18n="city_select_label">Or pick a megacity:</label>
-								<select id="citySelect" class="select">
-									<option value="" data-i18n="city_select_placeholder">Choose a megacity</option>
-								</select>
-							</div>
+						</div>
+
+						<div class="citySelectBlock">
+							<label for="citySelect" class="citySelectLabel" data-i18n="city_select_label">Or pick a megacity:</label>
+							<select id="citySelect" class="select">
+								<option value="" data-i18n="city_select_placeholder">Choose a megacity</option>
+							</select>
 						</div>
 
 						<div id="welcomeError" class="errorLine hidden"></div>
@@ -125,7 +126,7 @@
 									<div class="scoreCaption" data-i18n="beauty_coef_title">Sunset beauty coefficient</div>
 									<div class="scoreValue">
 										<div id="scoreNum" class="scoreNum">--</div>
-										<div class="scoreUnit">κ</div>
+										<div class="scoreUnit">%</div>
 									</div>
 								</div>
 							</div>
@@ -150,7 +151,7 @@
 							</div>
 							<div class="barLegend">
 								<span>0</span>
-								<span>1.0</span>
+								<span>100</span>
 							</div>
 						</div>
 
