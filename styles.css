@@ -13,6 +13,17 @@
 
 	--shadow: 0 30px 70px rgba(0,0,0,.50);
 	--r: 26px;
+
+	/* Dynamic sunset palette (set from JS) */
+	--skyA: rgba(97,94,239,.18);
+	--skyB: rgba(0,0,0,.55);
+	--glowA: rgba(255,180,90,.36);
+	--glowB: rgba(238,0,0,.22);
+	--sunA: rgba(255,240,220,1);
+	--sunB: rgba(255,180,90,1);
+	--sunC: rgba(238,0,0,.28);
+	--sparkA: rgba(255,255,255,.22);
+	--sparkB: rgba(255,255,255,.14);
 }
 
 *
@@ -259,11 +270,14 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	display:flex;
 	gap:10px;
 	align-items:center;
+	flex-wrap:wrap;
+	min-width:0;
 }
 
 .input
 {
 	flex:1;
+	min-width:120px;
 	border-radius:14px;
 	border:1px solid rgba(232,236,255,.14);
 	background:rgba(255,255,255,.04);
@@ -282,6 +296,7 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	cursor:pointer;
 	font-weight:800;
 	transition:transform .15s ease, background .15s ease;
+	white-space:nowrap;
 }
 
 .miniBtn:hover
@@ -334,8 +349,8 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	border-radius:22px;
 	border:1px solid rgba(232,236,255,.14);
 	background:
-		linear-gradient(180deg, rgba(97,94,239,.18), rgba(0,0,0,.35)),
-		radial-gradient(120px 120px at 25% 55%, rgba(255,190,120,.55), transparent 60%);
+		linear-gradient(180deg, var(--skyA), var(--skyB)),
+		radial-gradient(120px 120px at 25% 55%, var(--glowA), transparent 60%);
 	position:relative;
 	overflow:hidden;
 	box-shadow: 0 22px 50px rgba(0,0,0,.45);
@@ -345,7 +360,7 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 {
 	position:absolute;
 	inset:-40%;
-	background:radial-gradient(circle, rgba(255,180,90,.35), transparent 62%);
+	background:radial-gradient(circle, var(--glowA), transparent 62%);
 	filter:blur(30px);
 	animation:glowPulse 5s ease-in-out infinite;
 }
@@ -375,7 +390,7 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	width:64px;
 	height:64px;
 	border-radius:999px;
-	background:radial-gradient(circle at 30% 30%, rgba(255,235,210,1), rgba(255,180,90,1) 60%, rgba(238,0,0,.35) 120%);
+	background:radial-gradient(circle at 30% 30%, var(--sunA), var(--sunB) 60%, var(--sunC) 120%);
 	filter: drop-shadow(0 18px 24px rgba(255,160,80,.22));
 	left:-10%;
 	top:52%;
@@ -461,8 +476,8 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	border-radius:24px;
 	border:1px solid rgba(232,236,255,.14);
 	background:
-		radial-gradient(220px 180px at 26% 52%, rgba(255,180,90,.38), transparent 62%),
-		linear-gradient(180deg, rgba(97,94,239,.18), rgba(0,0,0,.38));
+		radial-gradient(220px 180px at 26% 52%, var(--glowA), transparent 62%),
+		linear-gradient(180deg, var(--skyA), rgba(0,0,0,.38));
 	position:relative;
 	overflow:hidden;
 	box-shadow: 0 22px 60px rgba(0,0,0,.42);
@@ -474,7 +489,7 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	width:72px;
 	height:72px;
 	border-radius:999px;
-	background:radial-gradient(circle at 30% 30%, rgba(255,240,220,1), rgba(255,180,90,1) 60%, rgba(238,0,0,.30) 120%);
+	background:radial-gradient(circle at 30% 30%, var(--sunA), var(--sunB) 60%, rgba(238,0,0,.30) 120%);
 	left:10%;
 	top:56%;
 	transform:translate(-50%,-50%);
@@ -750,6 +765,52 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	font-size:13px;
 }
 
+.colorBlock
+{
+	margin-top:14px;
+	padding:12px 12px;
+	border-radius:18px;
+	border:1px solid rgba(232,236,255,.10);
+	background:rgba(255,255,255,.02);
+}
+
+.colorTitleRow
+{
+	display:flex;
+	gap:10px;
+	align-items:center;
+	justify-content:space-between;
+	flex-wrap:wrap;
+}
+
+.colorTitle
+{
+	font-weight:900;
+}
+
+.colorChip
+{
+	display:inline-flex;
+	gap:8px;
+	align-items:center;
+	padding:6px 10px;
+	border-radius:999px;
+	border:1px solid rgba(232,236,255,.12);
+	background:
+		linear-gradient(90deg, rgba(97,94,239,.45) 0%, rgba(255,180,90,.45) 45%, rgba(238,0,0,.45) 100%);
+	color:rgba(232,236,255,.88);
+	font-size:12px;
+	white-space:nowrap;
+}
+
+.colorDesc
+{
+	margin-top:6px;
+	color:rgba(232,236,255,.72);
+	font-size:13px;
+	line-height:1.35;
+}
+
 .actions
 {
 	margin-top:14px;
@@ -775,8 +836,8 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	border-radius:22px;
 	border:1px solid rgba(232,236,255,.12);
 	background:
-		linear-gradient(180deg, rgba(97,94,239,.16), rgba(0,0,0,.55)),
-		radial-gradient(220px 180px at 58% 56%, rgba(255,180,90,.36), transparent 62%);
+		linear-gradient(180deg, var(--skyA), var(--skyB)),
+		radial-gradient(220px 180px at 58% 56%, var(--glowA), transparent 62%);
 	height:260px;
 	position:relative;
 	overflow:hidden;
@@ -789,7 +850,7 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	width:84px;
 	height:84px;
 	border-radius:999px;
-	background:radial-gradient(circle at 30% 30%, rgba(255,240,220,1), rgba(255,180,90,1) 60%, rgba(238,0,0,.28) 120%);
+	background:radial-gradient(circle at 30% 30%, var(--sunA), var(--sunB) 60%, var(--sunC) 120%);
 	left:58%;
 	top:56%;
 	transform:translate(-50%,-50%);
@@ -831,7 +892,7 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 {
 	position:absolute;
 	inset:-40%;
-	background:radial-gradient(circle, rgba(255,180,90,.16), transparent 60%);
+	background:radial-gradient(circle, var(--glowB), transparent 60%);
 	filter:blur(28px);
 	animation:glowPulse 6s ease-in-out infinite;
 }
@@ -841,9 +902,9 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	position:absolute;
 	inset:0;
 	background:
-		radial-gradient(2px 2px at 20% 20%, rgba(255,255,255,.22), transparent 55%),
+		radial-gradient(2px 2px at 20% 20%, var(--sparkA), transparent 55%),
 		radial-gradient(2px 2px at 60% 28%, rgba(255,255,255,.18), transparent 55%),
-		radial-gradient(2px 2px at 74% 44%, rgba(255,255,255,.14), transparent 55%),
+		radial-gradient(2px 2px at 74% 44%, var(--sparkB), transparent 55%),
 		radial-gradient(2px 2px at 40% 55%, rgba(255,255,255,.10), transparent 55%);
 	opacity:.55;
 }
@@ -888,6 +949,7 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	gap:10px;
 	align-items:center;
 }
+
 .pill,
 .timeVal,
 .capSub,
@@ -933,16 +995,6 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	justify-content:center;
 }
 
-@media (max-width: 420px)
-{
-	.scoreRow
-	{
-		flex-direction:column;
-		align-items:flex-start;
-		gap:10px;
-	}
-}
-
 @media (max-width: 520px)
 {
 	.app
@@ -953,5 +1005,40 @@ h1,.badgeTitle,.loadingTitle,.scoreNum,.reasonsTitle,.ctaTitle
 	.stage
 	{
 		padding:18px;
+	}
+
+	.timeRow
+	{
+		grid-template-columns:1fr;
+	}
+}
+
+@media (max-width: 420px)
+{
+	.scoreRow
+	{
+		flex-direction:column;
+		align-items:flex-start;
+		gap:10px;
+	}
+}
+
+@media (max-width: 420px)
+{
+	.manualRow
+	{
+		flex-direction:column;
+		align-items:stretch;
+	}
+
+	.input
+	{
+		min-width:0;
+		width:100%;
+	}
+
+	.miniBtn
+	{
+		width:100%;
 	}
 }
