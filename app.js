@@ -417,14 +417,33 @@ function cacheBustUrl(url)
 	return `${url}${sep}_=${Date.now()}`;
 }
 
-async function fetchWithTimeout(url, timeoutMs = 12000, headers = {})
+const PROXY_ORIGIN = "https://cors.isomorphic-git.org/";
+
+function shouldRetryWithProxy(error)
+{
+	if (!error) return false;
+	if (error.name === "TypeError") return true;
+	const msg = typeof error.message === "string" ? error.message : "";
+	return msg.toLowerCase().includes("failed to fetch");
+}
+
+function buildProxyUrl(url)
+{
+	if (typeof url !== "string") return null;
+	if (!url.startsWith("http")) return null;
+	if (url.startsWith(PROXY_ORIGIN)) return null;
+	return `${PROXY_ORIGIN}${url}`;
+}
+
+async function fetchWithTimeout(url, timeoutMs = 12000, headers = {}, allowProxy = true)
 {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	const finalUrl = cacheBustUrl(url);
 
 	try
 	{
-		const res = await fetch(cacheBustUrl(url),
+		const res = await fetch(finalUrl,
 		{
 			signal: controller.signal,
 			headers,
@@ -437,6 +456,20 @@ async function fetchWithTimeout(url, timeoutMs = 12000, headers = {})
 		}
 
 		return await res.json();
+	}
+	catch (error)
+	{
+		if (allowProxy && shouldRetryWithProxy(error))
+		{
+			const proxied = buildProxyUrl(url);
+			if (proxied)
+			{
+				console.warn("[sunset] Retrying via proxy:", url);
+				return await fetchWithTimeout(proxied, timeoutMs, headers, false);
+			}
+		}
+
+		throw error;
 	}
 	finally
 	{
@@ -1000,7 +1033,7 @@ function setResultUI(payload)
 	pillProvider.textContent = `${T().source}: ${payload.provider}`;
 	pillCoords.textContent = `${payload.lat.toFixed(4)}, ${payload.lon.toFixed(4)}`;
 
-	scoreNum.textContent = payload.beautyCoef.toFixed(2);
+	scoreNum.textContent = String(payload.score);
 	scoreLabel.textContent = T()[payload.labelKey] || payload.labelKey;
 
 	const windowInfo = buildSunsetWindow(payload.sunsetIso, payload.timezone);
@@ -1079,7 +1112,8 @@ function renderColorForecast(forecast)
 
 		const value = document.createElement("div");
 		value.className = "colorSwatchValue";
-		value.textContent = `${color.intensity.toFixed(2)}κ`;
+		const pct = Number.isFinite(color.intensityPct) ? color.intensityPct : Math.round((color.intensity || 0) * 100);
+		value.textContent = `${pct}%`;
 
 		meta.appendChild(name);
 		meta.appendChild(value);
@@ -1273,6 +1307,7 @@ function buildColorForecast(metrics, beautyCoef = 0.5)
 				key: "golden",
 				labelKey: "color_forecast_golden",
 				intensity: Number(scale.toFixed(2)),
+				intensityPct: Math.round(scale * 100),
 				gradient: preset.gradient
 			}
 		];
@@ -1281,10 +1316,12 @@ function buildColorForecast(metrics, beautyCoef = 0.5)
 	return candidates.map(entry =>
 	{
 		const preset = COLOR_PRESETS[entry.key] || COLOR_PRESETS.golden;
+		const normalized = clamp(entry.intensity * scale, 0, 1);
 		return {
 			key: entry.key,
 			labelKey: `color_forecast_${entry.key}`,
-			intensity: Number(clamp(entry.intensity * scale, 0, 1).toFixed(2)),
+			intensity: Number(normalized.toFixed(2)),
+			intensityPct: Math.round(normalized * 100),
 			gradient: preset.gradient
 		};
 	});
@@ -1310,10 +1347,15 @@ btnCopy.addEventListener("click", async () =>
 	{
 		const topColor = lastColorForecast[0];
 		const topColorLabel = topColor ? (T()[topColor.labelKey] || topColor.labelKey) : colorChip.textContent;
-		const topColorValue = topColor ? `${topColor.intensity.toFixed(2)}κ` : "";
+		const topColorValue = topColor
+			? `${(Number.isFinite(topColor.intensityPct) ? topColor.intensityPct : Math.round((topColor.intensity || 0) * 100))}%`
+			: "";
+		const beautyPercent = scoreNum.textContent && scoreNum.textContent !== "--"
+			? `${scoreNum.textContent}%`
+			: "--";
 
 		const text =
-			`${T().beauty_coef_title}: ${scoreNum.textContent}κ (${scoreLabel.textContent}). ` +
+			`${T().beauty_coef_title}: ${beautyPercent} (${scoreLabel.textContent}). ` +
 			`${pillCoords.textContent}. ${sunsetWindow.textContent} (${timeZoneVal.textContent}). ` +
 			`${T().color_title}: ${topColorLabel} ${topColorValue}`.trim();
 
