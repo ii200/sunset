@@ -35,6 +35,9 @@ const timeZoneVal = document.getElementById("timeZoneVal");
 const capTitle = document.getElementById("capTitle");
 const capSub = document.getElementById("capSub");
 
+const colorChip = document.getElementById("colorChip");
+const colorDesc = document.getElementById("colorDesc");
+
 const copyToast = document.getElementById("copyToast");
 
 // ---------- i18n ----------
@@ -94,6 +97,8 @@ const I18N =
 		copied: "Скопировано!",
 		copy_failed: "Не удалось скопировать",
 
+		color_title: "Возможные цвета заката",
+
 		window_unknown: "Вечернее окно: 18:30–20:30 (оценка)",
 		caption_title_exact: "Окно заката",
 		caption_sub_exact: "Оценка основана на погоде около времени заката.",
@@ -104,6 +109,15 @@ const I18N =
 		label_high: "Высокий шанс",
 		label_mid: "Средний шанс",
 		label_low: "Низкий шанс",
+
+		palette_warm_title: "Тёплый золото-оранжевый",
+		palette_warm_desc: "Обычно получается, когда горизонт открыт (мало низких облаков), а выше есть немного облаков для подсветки.",
+		palette_crimson_title: "Красно-малиновый / драматичный",
+		palette_crimson_desc: "Часто бывает при влажности/дымке: свет сильнее «краснеет», контраст может стать мягче.",
+		palette_pastel_title: "Пастельный (персик/розовый)",
+		palette_pastel_desc: "Бывает при умеренной дымке и лёгкой облачности: цвета нежнее, без жёсткой драматичности.",
+		palette_flat_title: "Сдержанный (может быть ровно)",
+		palette_flat_desc: "Когда облаков почти нет (нечему подсвечиваться) или небо сильно закрыто низкой облачностью.",
 
 		footer: "Всё имеет свой закат, только ночь заканчивается рассветом.",
 
@@ -147,6 +161,8 @@ const I18N =
 		copied: "Copied",
 		copy_failed: "Copy failed",
 
+		color_title: "Possible sunset colors",
+
 		window_unknown: "Evening window: 18:30–20:30 (estimate)",
 		caption_title_exact: "Sunset window",
 		caption_sub_exact: "Score is based on the weather around sunset time.",
@@ -157,6 +173,15 @@ const I18N =
 		label_high: "High chance",
 		label_mid: "Medium chance",
 		label_low: "Low chance",
+
+		palette_warm_title: "Warm golden/orange",
+		palette_warm_desc: "Common when the horizon is open (few low clouds) and there are some mid/high clouds to glow.",
+		palette_crimson_title: "Crimson / dramatic reds",
+		palette_crimson_desc: "Often with humidity/haze: light shifts redder, contrast becomes softer.",
+		palette_pastel_title: "Pastel (peach/pink)",
+		palette_pastel_desc: "With moderate haze and light cloud texture: gentle colors, less drama.",
+		palette_flat_title: "Muted / may look flat",
+		palette_flat_desc: "When there are almost no clouds to catch light or low clouds block the horizon.",
 
 		footer: "Everything has its sunset, only the night ends with dawn.",
 
@@ -200,6 +225,8 @@ const I18N =
 		copied: "Copiado",
 		copy_failed: "No se pudo copiar",
 
+		color_title: "Colores posibles del atardecer",
+
 		window_unknown: "Ventana: 18:30–20:30 (estimación)",
 		caption_title_exact: "Ventana del atardecer",
 		caption_sub_exact: "El puntaje se basa en el clima cerca del atardecer.",
@@ -210,6 +237,15 @@ const I18N =
 		label_high: "Probabilidad alta",
 		label_mid: "Probabilidad media",
 		label_low: "Probabilidad baja",
+
+		palette_warm_title: "Cálido dorado/naranja",
+		palette_warm_desc: "Suele pasar con horizonte abierto (pocas nubes bajas) y algo de nubes medias/altas para iluminar.",
+		palette_crimson_title: "Rojo carmín / dramático",
+		palette_crimson_desc: "Con humedad/neblina: la luz se vuelve más roja y el contraste baja.",
+		palette_pastel_title: "Pastel (durazno/rosa)",
+		palette_pastel_desc: "Con neblina moderada y algo de textura: colores suaves, menos drama.",
+		palette_flat_title: "Más apagado / puede verse plano",
+		palette_flat_desc: "Si no hay nubes para captar luz o nubes bajas tapan el horizonte.",
 
 		footer: "Todo tiene su ocaso, sólo la noche termina con el amanecer.",
 
@@ -269,6 +305,12 @@ function sleep(ms)
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function cacheBustUrl(url)
+{
+	const sep = url.includes("?") ? "&" : "?";
+	return `${url}${sep}_=${Date.now()}`;
+}
+
 async function fetchWithTimeout(url, timeoutMs = 12000, headers = {})
 {
 	const controller = new AbortController();
@@ -276,7 +318,7 @@ async function fetchWithTimeout(url, timeoutMs = 12000, headers = {})
 
 	try
 	{
-		const res = await fetch(url,
+		const res = await fetch(cacheBustUrl(url),
 		{
 			signal: controller.signal,
 			headers,
@@ -436,6 +478,131 @@ const REASONS =
 	}
 };
 
+// ---------- Color prediction + dynamic palette ----------
+function predictSunsetPalette(m)
+{
+	// Inputs
+	const low = m.cloud_cover_low;
+	const mid = m.cloud_cover_mid;
+	const high = m.cloud_cover_high;
+	const humidity = m.relative_humidity_2m;
+	const visibility = m.visibility;
+
+	const lowKnown = (low !== null && low !== undefined);
+	const midKnown = (mid !== null && mid !== undefined);
+	const highKnown = (high !== null && high !== undefined);
+
+	const upper = (midKnown || highKnown) ? ((midKnown ? mid : 0) * 0.6 + (highKnown ? high : 0) * 0.4) : null;
+
+	const hazy =
+		(humidity !== null && humidity !== undefined && humidity > 82) ||
+		(visibility !== null && visibility !== undefined && (visibility / 1000) < 9);
+
+	let paletteKey = "palette_warm_title";
+	let paletteDescKey = "palette_warm_desc";
+
+	// Flat: no texture or horizon blocked hard
+	if (lowKnown && low > 65)
+	{
+		paletteKey = "palette_flat_title";
+		paletteDescKey = "palette_flat_desc";
+	}
+	else if (upper !== null && upper < 12)
+	{
+		paletteKey = "palette_flat_title";
+		paletteDescKey = "palette_flat_desc";
+	}
+	// Crimson: hazy conditions push reds
+	else if (hazy)
+	{
+		paletteKey = "palette_crimson_title";
+		paletteDescKey = "palette_crimson_desc";
+	}
+	// Pastel: mild haze / mild texture
+	else if ((humidity !== null && humidity > 70) || (upper !== null && upper >= 12 && upper < 22))
+	{
+		paletteKey = "palette_pastel_title";
+		paletteDescKey = "palette_pastel_desc";
+	}
+	// Warm remains default
+
+	const css = paletteToCss(paletteKey);
+
+	return { paletteKey, paletteDescKey, css };
+}
+
+function paletteToCss(paletteKey)
+{
+	// Return CSS custom properties for the UI art/loader
+	// Keys are stable, based on palette title key
+	if (paletteKey === "palette_crimson_title")
+	{
+		return {
+			"--skyA": "rgba(90,40,120,.22)",
+			"--skyB": "rgba(0,0,0,.62)",
+			"--glowA": "rgba(238,0,0,.26)",
+			"--glowB": "rgba(255,120,80,.18)",
+			"--sunA": "rgba(255,235,220,1)",
+			"--sunB": "rgba(255,120,90,1)",
+			"--sunC": "rgba(238,0,0,.38)",
+			"--sparkA": "rgba(255,255,255,.18)",
+			"--sparkB": "rgba(255,255,255,.12)"
+		};
+	}
+
+	if (paletteKey === "palette_pastel_title")
+	{
+		return {
+			"--skyA": "rgba(120,120,240,.18)",
+			"--skyB": "rgba(0,0,0,.56)",
+			"--glowA": "rgba(255,170,160,.22)",
+			"--glowB": "rgba(255,200,180,.14)",
+			"--sunA": "rgba(255,245,235,1)",
+			"--sunB": "rgba(255,200,160,1)",
+			"--sunC": "rgba(255,120,120,.22)",
+			"--sparkA": "rgba(255,255,255,.20)",
+			"--sparkB": "rgba(255,255,255,.12)"
+		};
+	}
+
+	if (paletteKey === "palette_flat_title")
+	{
+		return {
+			"--skyA": "rgba(90,100,140,.14)",
+			"--skyB": "rgba(0,0,0,.66)",
+			"--glowA": "rgba(190,190,210,.14)",
+			"--glowB": "rgba(140,160,220,.10)",
+			"--sunA": "rgba(240,240,245,1)",
+			"--sunB": "rgba(220,220,230,1)",
+			"--sunC": "rgba(120,140,200,.18)",
+			"--sparkA": "rgba(255,255,255,.14)",
+			"--sparkB": "rgba(255,255,255,.10)"
+		};
+	}
+
+	// Warm default
+	return {
+		"--skyA": "rgba(97,94,239,.18)",
+		"--skyB": "rgba(0,0,0,.55)",
+		"--glowA": "rgba(255,180,90,.36)",
+		"--glowB": "rgba(238,0,0,.18)",
+		"--sunA": "rgba(255,240,220,1)",
+		"--sunB": "rgba(255,180,90,1)",
+		"--sunC": "rgba(238,0,0,.28)",
+		"--sparkA": "rgba(255,255,255,.22)",
+		"--sparkB": "rgba(255,255,255,.14)"
+	};
+}
+
+function applyPaletteCss(cssVars)
+{
+	const root = document.documentElement;
+	Object.keys(cssVars).forEach(k =>
+	{
+		root.style.setProperty(k, cssVars[k]);
+	});
+}
+
 // ---------- Providers ----------
 async function getDataOpenMeteo(lat, lon)
 {
@@ -553,7 +720,6 @@ async function getDataMetNo(lat, lon)
 
 async function getDataFromProviders(lat, lon)
 {
-	// Put Open-Meteo first for stability across browsers (including iOS)
 	const providers =
 	[
 		{ name: "Open-Meteo", fn: getDataOpenMeteo },
@@ -745,6 +911,12 @@ function setResultUI(payload)
 		reasons.appendChild(li);
 	});
 
+	// Color prediction block + dynamic palette
+	colorChip.textContent = T()[payload.palette.paletteKey] || "—";
+	colorDesc.textContent = T()[payload.palette.paletteDescKey] || "—";
+
+	applyPaletteCss(payload.palette.css);
+
 	requestAnimationFrame(() =>
 	{
 		barFill.style.width = `${payload.score}%`;
@@ -808,6 +980,7 @@ async function runFlow(mode, manualCoords = null)
 		await sleep(220);
 
 		const scored = scoreSunset(data.metrics);
+		const palette = predictSunsetPalette(data.metrics);
 
 		stopLoadingTicker();
 
@@ -820,7 +993,8 @@ async function runFlow(mode, manualCoords = null)
 			sunsetIso: data.sunsetIso,
 			score: scored.score,
 			labelKey: scored.labelKey,
-			reasonKeys: scored.reasonKeys
+			reasonKeys: scored.reasonKeys,
+			palette
 		});
 
 		showPanel(stepResult);
@@ -849,6 +1023,11 @@ function resetUI()
 	timeZoneVal.textContent = "—";
 	pillProvider.textContent = "—";
 	pillCoords.textContent = "—";
+
+	colorChip.textContent = "—";
+	colorDesc.textContent = "—";
+
+	applyPaletteCss(paletteToCss("palette_warm_title"));
 }
 
 // ---------- Language switch (bottom pill) ----------
@@ -897,7 +1076,8 @@ btnCopy.addEventListener("click", async () =>
 	{
 		const text =
 			`Sunset Chance: ${scoreNum.textContent}% (${scoreLabel.textContent}). ` +
-			`${pillCoords.textContent}. ${sunsetWindow.textContent} (${timeZoneVal.textContent}).`;
+			`${pillCoords.textContent}. ${sunsetWindow.textContent} (${timeZoneVal.textContent}). ` +
+			`${T().color_title}: ${colorChip.textContent}.`;
 
 		await navigator.clipboard.writeText(text);
 
