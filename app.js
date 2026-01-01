@@ -40,6 +40,14 @@ const colorDesc = document.getElementById("colorDesc");
 
 const copyToast = document.getElementById("copyToast");
 
+// Optional future-info blocks (will be filled only if they exist in HTML)
+const futureBox = document.getElementById("futureBox");
+const futureTiming = document.getElementById("futureTiming");
+const futureDrama = document.getElementById("futureDrama");
+const futureHorizon = document.getElementById("futureHorizon");
+const futureHaze = document.getElementById("futureHaze");
+const futureClouds = document.getElementById("futureClouds");
+
 // ---------- i18n ----------
 function detectLang()
 {
@@ -119,6 +127,16 @@ const I18N =
 		palette_flat_title: "Сдержанный (может быть ровно)",
 		palette_flat_desc: "Когда облаков почти нет (нечему подсвечиваться) или небо сильно закрыто низкой облачностью.",
 
+		future_title: "Что ещё можно ожидать",
+		future_timing: "Лучшее время: выйди за 20–35 минут до центра окна и останься ещё 10–15 минут после.",
+		future_drama_soft: "Контраст мягкий: закат будет нежнее, без резких градиентов.",
+		future_drama_strong: "Контраст высокий: больше шансов на «вау»-градиенты и лучи.",
+		future_horizon_risk_low: "Горизонт скорее открыт: линия солнца должна читаться.",
+		future_horizon_risk_high: "Есть риск низких облаков у горизонта: солнце может «спрятаться» раньше.",
+		future_haze_low: "Дымка/туман маловероятны: цвета обычно чище.",
+		future_haze_high: "Есть риск дымки: цвета могут быть мягче, но красный оттенок вероятнее.",
+		future_clouds_fmt: "Облачность у окна: низк. {low}%, средн. {mid}%, высок. {high}%",
+
 		footer: "Всё имеет свой закат, только ночь заканчивается рассветом.",
 
 		err_geo: "Не удалось получить геолокацию.",
@@ -183,6 +201,16 @@ const I18N =
 		palette_flat_title: "Muted / may look flat",
 		palette_flat_desc: "When there are almost no clouds to catch light or low clouds block the horizon.",
 
+		future_title: "What else to expect",
+		future_timing: "Best time: go out 20–35 minutes before the center of the window, stay 10–15 minutes after.",
+		future_drama_soft: "Soft contrast: gentler look, fewer hard gradients.",
+		future_drama_strong: "High contrast: better odds for “wow” gradients and crepuscular rays.",
+		future_horizon_risk_low: "Horizon likely open: the sun line should be visible.",
+		future_horizon_risk_high: "Risk of low clouds near horizon: the sun may disappear earlier.",
+		future_haze_low: "Haze/fog unlikely: colors tend to be cleaner.",
+		future_haze_high: "Haze risk: softer colors, but reds become more likely.",
+		future_clouds_fmt: "Clouds near the window: low {low}%, mid {mid}%, high {high}%",
+
 		footer: "Everything has its sunset, only the night ends with dawn.",
 
 		err_geo: "Could not get geolocation.",
@@ -246,6 +274,16 @@ const I18N =
 		palette_pastel_desc: "Con neblina moderada y algo de textura: colores suaves, menos drama.",
 		palette_flat_title: "Más apagado / puede verse plano",
 		palette_flat_desc: "Si no hay nubes para captar luz o nubes bajas tapan el horizonte.",
+
+		future_title: "Qué más esperar",
+		future_timing: "Mejor momento: salí 20–35 minutos antes del centro de la ventana y quedate 10–15 minutos después.",
+		future_drama_soft: "Contraste suave: look más delicado, menos gradientes duros.",
+		future_drama_strong: "Contraste alto: más chances de “wow” y rayos crepusculares.",
+		future_horizon_risk_low: "Horizonte probablemente abierto: se vería bien la línea del sol.",
+		future_horizon_risk_high: "Riesgo de nubes bajas en el horizonte: el sol puede taparse antes.",
+		future_haze_low: "Poca chance de neblina: colores suelen ser más limpios.",
+		future_haze_high: "Riesgo de neblina: colores más suaves, pero rojos más probables.",
+		future_clouds_fmt: "Nubes cerca de la ventana: bajas {low}%, medias {mid}%, altas {high}%",
 
 		footer: "Todo tiene su ocaso, sólo la noche termina con el amanecer.",
 
@@ -478,31 +516,35 @@ const REASONS =
 	}
 };
 
-// ---------- Color prediction + dynamic palette ----------
+// ---------- Color prediction + "future info" ----------
+function safePct(v)
+{
+	if (v === null || v === undefined || !Number.isFinite(v)) return null;
+	return clamp(Math.round(v), 0, 100);
+}
+
 function predictSunsetPalette(m)
 {
-	// Inputs
-	const low = m.cloud_cover_low;
-	const mid = m.cloud_cover_mid;
-	const high = m.cloud_cover_high;
-	const humidity = m.relative_humidity_2m;
-	const visibility = m.visibility;
+	const low = safePct(m.cloud_cover_low);
+	const mid = safePct(m.cloud_cover_mid);
+	const high = safePct(m.cloud_cover_high);
 
-	const lowKnown = (low !== null && low !== undefined);
-	const midKnown = (mid !== null && mid !== undefined);
-	const highKnown = (high !== null && high !== undefined);
+	const humidity = (m.relative_humidity_2m !== null && m.relative_humidity_2m !== undefined) ? Number(m.relative_humidity_2m) : null;
+	const visibilityKm = (m.visibility !== null && m.visibility !== undefined) ? (Number(m.visibility) / 1000) : null;
 
-	const upper = (midKnown || highKnown) ? ((midKnown ? mid : 0) * 0.6 + (highKnown ? high : 0) * 0.4) : null;
+	const upper =
+		(mid !== null || high !== null)
+			? ((mid !== null ? mid : 0) * 0.6 + (high !== null ? high : 0) * 0.4)
+			: null;
 
 	const hazy =
-		(humidity !== null && humidity !== undefined && humidity > 82) ||
-		(visibility !== null && visibility !== undefined && (visibility / 1000) < 9);
+		(humidity !== null && humidity > 82) ||
+		(visibilityKm !== null && visibilityKm < 9);
 
 	let paletteKey = "palette_warm_title";
 	let paletteDescKey = "palette_warm_desc";
 
-	// Flat: no texture or horizon blocked hard
-	if (lowKnown && low > 65)
+	if (low !== null && low > 65)
 	{
 		paletteKey = "palette_flat_title";
 		paletteDescKey = "palette_flat_desc";
@@ -512,29 +554,149 @@ function predictSunsetPalette(m)
 		paletteKey = "palette_flat_title";
 		paletteDescKey = "palette_flat_desc";
 	}
-	// Crimson: hazy conditions push reds
 	else if (hazy)
 	{
 		paletteKey = "palette_crimson_title";
 		paletteDescKey = "palette_crimson_desc";
 	}
-	// Pastel: mild haze / mild texture
 	else if ((humidity !== null && humidity > 70) || (upper !== null && upper >= 12 && upper < 22))
 	{
 		paletteKey = "palette_pastel_title";
 		paletteDescKey = "palette_pastel_desc";
 	}
-	// Warm remains default
 
-	const css = paletteToCss(paletteKey);
+	const drama = estimateDrama(m, paletteKey);
+	const horizonRisk = estimateHorizonRisk(low);
+	const hazeRisk = estimateHazeRisk(humidity, visibilityKm);
 
-	return { paletteKey, paletteDescKey, css };
+	return {
+		paletteKey,
+		paletteDescKey,
+		low,
+		mid,
+		high,
+		humidity,
+		visibilityKm,
+		drama,
+		horizonRisk,
+		hazeRisk
+	};
 }
 
-function paletteToCss(paletteKey)
+function estimateDrama(m, paletteKey)
 {
-	// Return CSS custom properties for the UI art/loader
-	// Keys are stable, based on palette title key
+	const low = safePct(m.cloud_cover_low);
+	const mid = safePct(m.cloud_cover_mid);
+	const high = safePct(m.cloud_cover_high);
+
+	const upper =
+		(mid !== null || high !== null)
+			? ((mid !== null ? mid : 0) * 0.6 + (high !== null ? high : 0) * 0.4)
+			: null;
+
+	// Base: texture in the upper layers gives drama, but too much blocks it.
+	let v = 0;
+
+	if (upper === null)
+	{
+		v = 40;
+	}
+	else if (upper >= 25 && upper <= 60)
+	{
+		v = 78;
+	}
+	else if (upper < 15)
+	{
+		v = 35;
+	}
+	else if (upper > 75)
+	{
+		v = 45;
+	}
+	else
+	{
+		v = 62;
+	}
+
+	// Horizon blocking hurts drama, too.
+	if (low !== null && low > 60) v -= 18;
+	else if (low !== null && low > 40) v -= 8;
+
+	// Palette hint
+	if (paletteKey === "palette_crimson_title") v += 6;
+	if (paletteKey === "palette_flat_title") v -= 10;
+
+	return clamp(Math.round(v), 0, 100);
+}
+
+function estimateHorizonRisk(low)
+{
+	if (low === null) return 45;
+	if (low > 65) return 78;
+	if (low > 45) return 55;
+	return 25;
+}
+
+function estimateHazeRisk(humidity, visibilityKm)
+{
+	let r = 35;
+
+	if (humidity !== null && humidity > 85) r += 25;
+	else if (humidity !== null && humidity > 75) r += 12;
+
+	if (visibilityKm !== null && visibilityKm < 8) r += 25;
+	else if (visibilityKm !== null && visibilityKm < 12) r += 10;
+
+	return clamp(Math.round(r), 0, 100);
+}
+
+function setFutureInfoUI(paletteObj, windowInfo)
+{
+	const t = T();
+
+	// If HTML block exists — fill it. Otherwise do nothing.
+	if (futureBox)
+	{
+		futureBox.classList.remove("hidden");
+	}
+
+	if (futureTiming)
+	{
+		futureTiming.textContent = t.future_timing;
+	}
+
+	if (futureDrama)
+	{
+		futureDrama.textContent = (paletteObj.drama >= 65) ? t.future_drama_strong : t.future_drama_soft;
+	}
+
+	if (futureHorizon)
+	{
+		futureHorizon.textContent = (paletteObj.horizonRisk >= 55) ? t.future_horizon_risk_high : t.future_horizon_risk_low;
+	}
+
+	if (futureHaze)
+	{
+		futureHaze.textContent = (paletteObj.hazeRisk >= 55) ? t.future_haze_high : t.future_haze_low;
+	}
+
+	if (futureClouds)
+	{
+		const low = (paletteObj.low === null) ? "—" : String(paletteObj.low);
+		const mid = (paletteObj.mid === null) ? "—" : String(paletteObj.mid);
+		const high = (paletteObj.high === null) ? "—" : String(paletteObj.high);
+
+		futureClouds.textContent =
+			t.future_clouds_fmt
+				.replace("{low}", low)
+				.replace("{mid}", mid)
+				.replace("{high}", high);
+	}
+}
+
+// Dynamic palette for animation (CSS vars). Works if CSS uses these vars.
+function paletteToCssVars(paletteKey)
+{
 	if (paletteKey === "palette_crimson_title")
 	{
 		return {
@@ -544,9 +706,7 @@ function paletteToCss(paletteKey)
 			"--glowB": "rgba(255,120,80,.18)",
 			"--sunA": "rgba(255,235,220,1)",
 			"--sunB": "rgba(255,120,90,1)",
-			"--sunC": "rgba(238,0,0,.38)",
-			"--sparkA": "rgba(255,255,255,.18)",
-			"--sparkB": "rgba(255,255,255,.12)"
+			"--sunC": "rgba(238,0,0,.38)"
 		};
 	}
 
@@ -559,9 +719,7 @@ function paletteToCss(paletteKey)
 			"--glowB": "rgba(255,200,180,.14)",
 			"--sunA": "rgba(255,245,235,1)",
 			"--sunB": "rgba(255,200,160,1)",
-			"--sunC": "rgba(255,120,120,.22)",
-			"--sparkA": "rgba(255,255,255,.20)",
-			"--sparkB": "rgba(255,255,255,.12)"
+			"--sunC": "rgba(255,120,120,.22)"
 		};
 	}
 
@@ -574,13 +732,10 @@ function paletteToCss(paletteKey)
 			"--glowB": "rgba(140,160,220,.10)",
 			"--sunA": "rgba(240,240,245,1)",
 			"--sunB": "rgba(220,220,230,1)",
-			"--sunC": "rgba(120,140,200,.18)",
-			"--sparkA": "rgba(255,255,255,.14)",
-			"--sparkB": "rgba(255,255,255,.10)"
+			"--sunC": "rgba(120,140,200,.18)"
 		};
 	}
 
-	// Warm default
 	return {
 		"--skyA": "rgba(97,94,239,.18)",
 		"--skyB": "rgba(0,0,0,.55)",
@@ -588,19 +743,14 @@ function paletteToCss(paletteKey)
 		"--glowB": "rgba(238,0,0,.18)",
 		"--sunA": "rgba(255,240,220,1)",
 		"--sunB": "rgba(255,180,90,1)",
-		"--sunC": "rgba(238,0,0,.28)",
-		"--sparkA": "rgba(255,255,255,.22)",
-		"--sparkB": "rgba(255,255,255,.14)"
+		"--sunC": "rgba(238,0,0,.28)"
 	};
 }
 
-function applyPaletteCss(cssVars)
+function applyPaletteCssVars(vars)
 {
 	const root = document.documentElement;
-	Object.keys(cssVars).forEach(k =>
-	{
-		root.style.setProperty(k, cssVars[k]);
-	});
+	Object.keys(vars).forEach(k => root.style.setProperty(k, vars[k]));
 }
 
 // ---------- Providers ----------
@@ -673,8 +823,6 @@ async function getDataMetNo(lat, lon)
 {
 	const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`;
 
-	// NOTE:
-	// Do NOT set "User-Agent" header in browser fetch. It's a forbidden header and breaks on iOS/Safari.
 	const data = await fetchWithTimeout(
 		url,
 		14000,
@@ -855,7 +1003,7 @@ function buildSunsetWindow(sunsetIso, timeZone)
 	const fromTxt = formatTime(from, timeZone);
 	const toTxt = formatTime(to, timeZone);
 
-	return { text: `${fromTxt}–${toTxt}`, isExact: true };
+	return { text: `${fromTxt}–${toTxt}`, isExact: true, center };
 }
 
 // ---------- Loading ticker ----------
@@ -911,11 +1059,24 @@ function setResultUI(payload)
 		reasons.appendChild(li);
 	});
 
-	// Color prediction block + dynamic palette
-	colorChip.textContent = T()[payload.palette.paletteKey] || "—";
-	colorDesc.textContent = T()[payload.palette.paletteDescKey] || "—";
+	// --- predicted sunset color + extra future info ---
+	const palette = predictSunsetPalette(payload.metrics);
+	const t = T();
 
-	applyPaletteCss(payload.palette.css);
+	if (colorChip)
+	{
+		colorChip.textContent = t[palette.paletteKey] || "—";
+	}
+	if (colorDesc)
+	{
+		colorDesc.textContent = t[palette.paletteDescKey] || "—";
+	}
+
+	// dynamic palette for loader/art if CSS uses these vars
+	applyPaletteCssVars(paletteToCssVars(palette.paletteKey));
+
+	// "future info" section (only if HTML IDs exist)
+	setFutureInfoUI(palette, windowInfo);
 
 	requestAnimationFrame(() =>
 	{
@@ -980,7 +1141,6 @@ async function runFlow(mode, manualCoords = null)
 		await sleep(220);
 
 		const scored = scoreSunset(data.metrics);
-		const palette = predictSunsetPalette(data.metrics);
 
 		stopLoadingTicker();
 
@@ -994,7 +1154,7 @@ async function runFlow(mode, manualCoords = null)
 			score: scored.score,
 			labelKey: scored.labelKey,
 			reasonKeys: scored.reasonKeys,
-			palette
+			metrics: data.metrics
 		});
 
 		showPanel(stepResult);
@@ -1024,10 +1184,17 @@ function resetUI()
 	pillProvider.textContent = "—";
 	pillCoords.textContent = "—";
 
-	colorChip.textContent = "—";
-	colorDesc.textContent = "—";
+	if (colorChip) colorChip.textContent = "—";
+	if (colorDesc) colorDesc.textContent = "—";
 
-	applyPaletteCss(paletteToCss("palette_warm_title"));
+	if (futureBox) futureBox.classList.add("hidden");
+	if (futureTiming) futureTiming.textContent = "";
+	if (futureDrama) futureDrama.textContent = "";
+	if (futureHorizon) futureHorizon.textContent = "";
+	if (futureHaze) futureHaze.textContent = "";
+	if (futureClouds) futureClouds.textContent = "";
+
+	applyPaletteCssVars(paletteToCssVars("palette_warm_title"));
 }
 
 // ---------- Language switch (bottom pill) ----------
@@ -1077,7 +1244,7 @@ btnCopy.addEventListener("click", async () =>
 		const text =
 			`Sunset Chance: ${scoreNum.textContent}% (${scoreLabel.textContent}). ` +
 			`${pillCoords.textContent}. ${sunsetWindow.textContent} (${timeZoneVal.textContent}). ` +
-			`${T().color_title}: ${colorChip.textContent}.`;
+			`${T().color_title}: ${colorChip ? colorChip.textContent : "—"}.`;
 
 		await navigator.clipboard.writeText(text);
 
