@@ -63,9 +63,13 @@ const MEGACITIES =
 	{ id: "buenos_aires", label: "Buenos Aires, Argentina", lat: -34.6037, lon: -58.3816 },
 	{ id: "paris", label: "Paris, France", lat: 48.8566, lon: 2.3522 },
 	{ id: "bangkok", label: "Bangkok, Thailand", lat: 13.7563, lon: 100.5018 },
+	{ id: "chiang_mai", label: "Chiang Mai, Thailand", lat: 18.7883, lon: 98.9853 },
+	{ id: "phuket", label: "Phuket, Thailand", lat: 7.8804, lon: 98.3923 },
+	{ id: "pattaya", label: "Pattaya, Thailand", lat: 12.9236, lon: 100.8825 },
 	{ id: "seoul", label: "Seoul, South Korea", lat: 37.5665, lon: 126.9780 },
 	{ id: "manila", label: "Manila, Philippines", lat: 14.5995, lon: 120.9842 },
-	{ id: "moscow", label: "Moscow, Russia", lat: 55.7558, lon: 37.6173 }
+	{ id: "moscow", label: "Moscow, Russia", lat: 55.7558, lon: 37.6173 },
+	{ id: "bali", label: "Bali (Denpasar, Indonesia)", lat: -8.4095, lon: 115.1889 }
 ];
 
 const COLOR_PRESETS =
@@ -150,8 +154,8 @@ const I18N =
 		copy_failed: "Не удалось скопировать",
 
 		beauty_coef_title: "Коэффициент красоты заката",
-		city_select_label: "Или выберите мегаполис:",
-		city_select_placeholder: "Выберите мегаполис",
+		city_select_label: "Или выберите популярное место:",
+		city_select_placeholder: "Выберите популярное место",
 		color_title: "Возможные цвета заката",
 		color_forecast_empty: "Недостаточно данных для яркой палитры — попробуйте другие координаты или время.",
 		color_forecast_golden: "Золотое свечение",
@@ -223,8 +227,8 @@ const I18N =
 		copy_failed: "Copy failed",
 
 		beauty_coef_title: "Sunset beauty coefficient",
-		city_select_label: "Or pick a megacity:",
-		city_select_placeholder: "Choose a megacity",
+		city_select_label: "Or pick a popular place:",
+		city_select_placeholder: "Choose a popular place",
 		color_title: "Possible sunset colors",
 		color_forecast_empty: "Not enough vivid hues expected — try a different time or place.",
 		color_forecast_golden: "Golden glow",
@@ -296,8 +300,8 @@ const I18N =
 		copy_failed: "No se pudo copiar",
 
 		beauty_coef_title: "Coeficiente de belleza del atardecer",
-		city_select_label: "O elegí una megaciudad:",
-		city_select_placeholder: "Elegí una megaciudad",
+		city_select_label: "O elegí un lugar popular:",
+		city_select_placeholder: "Elegí un lugar popular",
 		color_title: "Colores posibles del atardecer",
 		color_forecast_empty: "No se esperan colores intensos; probá con otro momento o ciudad.",
 		color_forecast_golden: "Brillo dorado",
@@ -858,12 +862,62 @@ async function getDataMetNo(lat, lon)
 	};
 }
 
+function mapSevenTimerCloud(value)
+{
+	if (!Number.isFinite(value)) return null;
+	const clamped = clamp(value, 0, 9);
+	return Math.round((clamped / 9) * 100);
+}
+
+function mapSevenTimerPrecip(code)
+{
+	if (!Number.isFinite(code)) return null;
+	const table = [0, 0, 0.3, 0.7, 1.5, 4, 8, 16, 30, 50];
+	const idx = clamp(Math.round(code), 0, table.length - 1);
+	return table[idx];
+}
+
+async function getDataSevenTimer(lat, lon)
+{
+	const url = `https://www.7timer.info/bin/api.pl?lon=${lon}&lat=${lat}&product=civil&output=json`;
+	const data = await fetchWithTimeout(url, 14000, {}, true);
+
+	const series = Array.isArray(data?.dataseries) ? data.dataseries : [];
+	if (!series.length)
+	{
+		throw new Error("7timer: empty data series");
+	}
+
+	const sample = series[0] || {};
+	const cloudPercent = mapSevenTimerCloud(sample.cloudcover);
+	const precip = mapSevenTimerPrecip(sample.prec_amount);
+	const humidity = Number.isFinite(sample.rh2m) ? sample.rh2m : null;
+
+	const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
+
+	return {
+		provider: "7timer.info",
+		timezone: tz,
+		sunsetIso: null,
+		metrics:
+		{
+			cloud_cover_low: cloudPercent,
+			cloud_cover_mid: null,
+			cloud_cover_high: null,
+			precipitation: precip,
+			visibility: null,
+			relative_humidity_2m: humidity
+		}
+	};
+}
+
 async function getDataFromProviders(lat, lon)
 {
 	const providers =
 	[
 		{ name: "Open-Meteo", fn: getDataOpenMeteo },
-		{ name: "MET Norway", fn: getDataMetNo }
+		{ name: "MET Norway", fn: getDataMetNo },
+		{ name: "7timer", fn: getDataSevenTimer }
 	];
 
 	let lastError = null;
